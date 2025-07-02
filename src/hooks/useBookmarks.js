@@ -1,12 +1,8 @@
-import { useAppContext } from "../context/AppContext";
+import { useAppContext } from '../context/AppContext';
 
-export function useBookmarks() {
-  const { state, dispatch } = useAppContext();
-  const addBookmark = userId => dispatch({ type: "ADD_BOOKMARK", payload: userId });
-  const removeBookmark = userId => dispatch({ type: "REMOVE_BOOKMARK", payload: userId });
-  return {
-    bookmarks: state.bookmarks,
-    addBookmark,
-    removeBookmark,
-  };
+export default function useBookmarks() {
+  const { state, addBookmark, removeBookmark } = useAppContext();
+  // bookmarks is an array of user objects
+  const bookmarks = Array.isArray(state.bookmarks) ? state.bookmarks : [];
+  return { bookmarks, addBookmark, removeBookmark };
 }

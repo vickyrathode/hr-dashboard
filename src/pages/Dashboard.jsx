@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
-import { useBookmarks } from '../hooks/useBookmarks';
-import { useSearch } from '../hooks/useSearch';
+import useBookmarks from '../hooks/useBookmarks';
+import useSearch from '../hooks/useSearch';
 import { useAppContext } from '../context/AppContext';
 
 const departments = ['Engineering', 'HR', 'Design', 'Marketing', 'Sales', 'Finance'];
@@ -17,11 +17,12 @@ function getRandomRating() {
 const Dashboard = () => {
   const { state, dispatch } = useAppContext();
   const { bookmarks, addBookmark, removeBookmark } = useBookmarks();
-  const { search, setSearch } = useSearch();
+  const { query, setQuery, filterUsers } = useSearch();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [filterDept, setFilterDept] = useState('');
-  const [filterRating, setFilterRating] = useState('');
+  const [filterDept, setFilterDept] = useState(''); // single-select for department
+  const [filterRating, setFilterRating] = useState(''); // single-select for rating
+  const isDark = state.theme === 'dark';
 
   // Fetch users from API
   useEffect(() => {
@@ -54,70 +55,70 @@ const Dashboard = () => {
 
   // Filter logic
   let filteredUsers = (state.users || []);
-  if (search) {
-    const s = search.toLowerCase();
-    filteredUsers = filteredUsers.filter(user =>
-      (user.firstName && user.firstName.toLowerCase().includes(s)) ||
-      (user.lastName && user.lastName.toLowerCase().includes(s)) ||
-      (user.email && user.email.toLowerCase().includes(s)) ||
-      (user.department && user.department.toLowerCase().includes(s))
-    );
-  }
   if (filterDept) {
     filteredUsers = filteredUsers.filter(u => u.department === filterDept);
   }
   if (filterRating) {
     filteredUsers = filteredUsers.filter(u => Math.round(u.rating) === Number(filterRating));
   }
+  filteredUsers = filterUsers(filteredUsers);
+
+  if (loading) return <div style={{ padding: 32, textAlign: 'center', color: isDark ? '#fff' : '#222' }}>Loading...</div>;
+  if (error) return <div style={{ padding: 32, textAlign: 'center', color: 'red' }}>{error}</div>;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 32 }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 32, background: isDark ? '#181a1b' : '#f5f6fa', color: isDark ? '#f5f6fa' : '#181a1b', minHeight: '100vh' }}>
       <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Employee Directory</h2>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <input
           type="text"
+          aria-label="Search employees by name, email, or department"
           placeholder="Search by name, email, or department..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
           style={{
             padding: 10,
             borderRadius: 6,
-            border: '1px solid #ccc',
+            border: isDark ? '1px solid #444' : '1px solid #ccc',
             width: 260,
             fontSize: 16,
+            background: isDark ? '#23272f' : '#fff',
+            color: isDark ? '#f5f6fa' : '#181a1b',
           }}
         />
-        {/* Department filter dropdown */}
+        {/* Department single-select */}
         <select
           value={filterDept}
           onChange={e => setFilterDept(e.target.value)}
-          style={{ minWidth: 160, padding: 8, borderRadius: 6 }}
+          aria-label="Filter by department"
+          style={{ minWidth: 160, padding: 8, borderRadius: 6, background: isDark ? '#23272f' : '#fff', color: isDark ? '#f5f6fa' : '#181a1b', border: isDark ? '1px solid #444' : '1px solid #ccc' }}
         >
           <option value="">All Departments</option>
-          {allDepartments.map(dep => (
+          {departments.map(dep => (
             <option key={dep} value={dep}>{dep}</option>
           ))}
         </select>
-        {/* Rating filter dropdown */}
+        {/* Rating single-select */}
         <select
           value={filterRating}
           onChange={e => setFilterRating(e.target.value)}
-          style={{ minWidth: 120, padding: 8, borderRadius: 6 }}
+          aria-label="Filter by rating"
+          style={{ minWidth: 120, padding: 8, borderRadius: 6, background: isDark ? '#23272f' : '#fff', color: isDark ? '#f5f6fa' : '#181a1b', border: isDark ? '1px solid #444' : '1px solid #ccc' }}
         >
           <option value="">All Ratings</option>
-          {allRatings.map(r => (
+          {[3, 4, 5].map(r => (
             <option key={r} value={r}>{r} Stars</option>
           ))}
         </select>
       </div>
-      {loading && <div style={{ textAlign: 'center', color: '#1976d2' }}>Loading users...</div>}
+      {loading && <div style={{ textAlign: 'center', color: isDark ? '#fff' : '#1976d2' }}>Loading users...</div>}
       {error && <div style={{ textAlign: 'center', color: 'red' }}>{error}</div>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'center' }}>
         {filteredUsers.length === 0 && !loading ? (
           <div style={{ fontSize: 18, color: '#888' }}>No employees found.</div>
         ) : (
           filteredUsers.map((user, idx) => (
-            <Card key={user.id} style={{ width: 270, position: 'relative', opacity: 0, animation: `fadeIn 0.5s ${idx * 0.07}s forwards` }}>
+            <Card key={user.id} style={{ width: 270, position: 'relative', opacity: 0, animation: `fadeIn 0.5s ${idx * 0.07}s forwards`, background: isDark ? '#23272f' : '#fff', color: isDark ? '#f5f6fa' : '#181a1b' }}>
               <img
                 src={user.avatar && user.avatar.startsWith('http') ? user.avatar : `https://randomuser.me/api/portraits/${user.gender === 'male' ? 'men' : 'women'}/${user.id}.jpg`}
                 alt={user.firstName || 'User'}
@@ -152,10 +153,14 @@ const Dashboard = () => {
                   window.history.pushState({}, '', `/employee/${user.id}`);
                   window.dispatchEvent(new PopStateEvent('popstate'));
                 }}>View</Button>
-                {bookmarks.includes(user.id) ? (
+                {bookmarks.some(b => b.id === user.id) ? (
                   <Button style={{ background: '#e53935' }} onClick={() => removeBookmark(user.id)}>Remove Bookmark</Button>
                 ) : (
-                  <Button onClick={() => addBookmark(user.id)}>Bookmark</Button>
+                  <Button onClick={() => {
+                    // Find the full user object from state.users
+                    const fullUser = (state.users || []).find(u => u.id === user.id);
+                    if (fullUser) addBookmark(fullUser);
+                  }}>Bookmark</Button>
                 )}
                 <Button style={{ background: '#43a047' }} onClick={() => alert('Promoted!')}>Promote</Button>
                 <Button style={{ background: '#ffb300' }} onClick={() => alert('Assigned to Project!')}>Assign to Project</Button>
